@@ -1,17 +1,17 @@
-// =========================
 // AUTH GUARD
-// =========================
 
 const loggedInFirstName = localStorage.getItem("firstName");
 
-// if tanpa else: kalau sesi tidak ada (falsy), paksa kembali ke login.
+const loggedInUsername = localStorage.getItem("username");
+
+const loggedInUserId = localStorage.getItem("userId");
+
+// kalau sesi tidak ada (falsy), paksa kembali ke login.
 if (!loggedInFirstName) {
   window.location.href = "login.html";
 }
 
-// =========================
 // KONSTANTA
-// =========================
 
 const PRODUCTS_API = "https://dummyjson.com/products";
 
@@ -21,9 +21,15 @@ const PAGE_SIZE = 8;
 
 const DEBOUNCE_DELAY = 400;
 
-// =========================
+// Key keranjang dibuat spesifik per user agar tiap akun punya keranjang sendiri
+// Fallback ke firstName untuk sesi lama yang belum menyimpan username.
+const CART_OWNER = loggedInUsername || loggedInUserId || loggedInFirstName;
+
+const CART_KEY = CART_OWNER ? `cartItems_${CART_OWNER}` : "cartItems";
+
+const LEGACY_CART_KEY = "cartItems";
+
 // REFERENSI DOM
-// =========================
 
 const productGrid = document.getElementById("productGrid");
 
@@ -41,11 +47,21 @@ const loadMoreWrap = document.getElementById("loadMoreWrap");
 
 const userGreeting = document.getElementById("userGreeting");
 
-// =========================
-// STATE APLIKASI
-// =========================
+const cartCountEl = document.getElementById("cartCount");
 
-let allProducts = []; // seluruh data mentah dari API (tidak pernah diubah)
+const cartTotalEl = document.getElementById("cartTotal");
+
+const productModal = document.getElementById("productModal");
+
+const modalBody = document.getElementById("modalBody");
+
+const closeModalBtn = document.getElementById("closeModalBtn");
+
+const logoutBtn = document.getElementById("logoutBtn");
+
+// STATE APLIKASI
+
+let allProducts = []; // seluruh data mentah dari API
 
 let workingProducts = []; // hasil setelah search + filter + sort diterapkan
 
@@ -57,23 +73,40 @@ let currentCategory = "all";
 
 let currentSort = "default";
 
-// =========================
-// NAVBAR: SAPAAN
-// =========================
+let cartQty = 0; // jumlah item di keranjang (navbar)
 
-// Nullish coalescing (??) sekadar pengaman tambahan bila firstName kosong.
+let cartTotalPrice = 0; // total harga keseluruhan (navbar)
+
+let cartItems = []; // daftar produk di keranjang: [{ id, title, price, qty }]
+
+// NAVBAR: SAPAAN
+
+// pengaman tambahan bila firstName kosong.
 userGreeting.textContent = loggedInFirstName ?? "Pengguna";
 
-// =========================
-// FUNGSI UTILITAS
-// =========================
+// NAVBAR: LOGOUT
 
-/**
- * Function Declaration: formatRupiah
- * Dipakai berulang kali di banyak tempat -> cocok pakai Function
- * Declaration (hoisting). Default Parameter dipakai agar tetap aman
- * dipanggil tanpa argumen.
- */
+// Logout: hapus sesi; pertahankan keranjang per-user & bersihkan key global
+logoutBtn.addEventListener("click", function () {
+  localStorage.removeItem("firstName");
+
+  localStorage.removeItem("username");
+
+  localStorage.removeItem("userId");
+
+  localStorage.removeItem(LEGACY_CART_KEY);
+
+  cartItems = [];
+  cartQty = 0;
+  cartTotalPrice = 0;
+
+  window.location.href = "login.html";
+});
+
+// FUNGSI UTILITAS
+
+// function Declaration: formatRupiah
+
 function formatRupiah(price = 0) {
   return "Rp " + Math.round(price).toLocaleString("id-ID");
 }
@@ -89,9 +122,9 @@ function renderStars(rating) {
 
   let i = 0;
 
-  // while loop: berputar selama kondisi (i < 5) masih true.
+  // berputar selama kondisi (i < 5) masih true.
   while (i < 5) {
-    // Ternary: bintang penuh atau bintang kosong.
+    // bintang penuh atau bintang kosong.
     stars += i < fullStars ? "★" : "☆";
 
     i++; // wajib diubah agar tidak infinite loop
@@ -100,11 +133,8 @@ function renderStars(rating) {
   return stars;
 }
 
-/**
- * Function Declaration: getStockLabel
- * Lebih dari 2 kemungkinan hasil -> pakai if / else if / else biasa
- * (bukan ternary bertingkat) agar tetap mudah dibaca.
- */
+// Function Declaration: getStockLabel
+
 function getStockLabel(stock) {
   if (stock === 0) {
     return { text: "Stok Habis", className: "stock-out" };
@@ -115,10 +145,7 @@ function getStockLabel(stock) {
   }
 }
 
-/**
- * Arrow Function: escapeHtml
- * Fungsi pendek satu baris (implicit return).
- */
+// Arrow Function: escapeHtml
 const escapeHtml = (text) =>
   String(text).replace(
     /[&<>"]/g,
@@ -131,14 +158,9 @@ const escapeHtml = (text) =>
       })[char],
   );
 
-/**
- * Function Declaration: debounce (Closure)
- * Fungsi bagian dalam "mengingat" variabel timerId dari fungsi luar
- * meskipun debounce() sudah selesai dieksekusi. Inilah yang membuat
- * pencarian tidak memicu re-render di setiap ketikan keyboard.
- */
+// mengingat variabel timerId dari fungsi luar meskipun debounce() sudah selesai dieksekusi yang membuat pencarian tidak memicu re-render di setiap ketikan keyboard.
 function debounce(callback, delay) {
-  let timerId; // tetap "hidup" berkat closure
+  let timerId; // tetap hidup berkat closure
 
   return function (...args) {
     clearTimeout(timerId);
@@ -149,14 +171,12 @@ function debounce(callback, delay) {
   };
 }
 
-// =========================
 // FETCH PRODUK + GLOBAL ERROR HANDLING
-// =========================
 
 function renderSkeletons(count = 8) {
   let html = "";
 
-  // for loop klasik: jumlah putaran sudah pasti diketahui.
+  // jumlah putaran sudah pasti diketahui.
   for (let i = 0; i < count; i++) {
     html += `
             <div class="skeleton">
@@ -188,33 +208,21 @@ function renderFetchError(message) {
     .addEventListener("click", fetchProducts);
 }
 
-/**
- * Function Declaration: fetchAllProductsFromApi
- * Products API (https://dummyjson.com/products) hanya mengirim maksimal
- * beberapa puluh data per request. Supaya search/filter/sort bekerja
- * terhadap SELURUH katalog (bukan cuma batch pertama), fungsi ini menarik
- * data halaman demi halaman menggunakan parameter `skip` & `limit`,
- * lalu digabung sampai jumlahnya sama dengan `total` yang dikirim server.
- *
- * while loop (Sub-Bab 03) dipakai karena jumlah halaman yang dibutuhkan
- * TIDAK diketahui di awal -> baru diketahui setelah membaca field
- * `total` dari response pertama.
- */
+// Ambil seluruh produk dari API halaman demi halaman sampai lengkap karena API membatasi jumlah data per request.
+
 async function fetchAllProductsFromApi() {
   let combinedProducts = [];
 
   let skip = 0;
 
-  let total = Infinity; // nilai awal sekadar "tidak diketahui", diganti setelah request pertama
+  let total = Infinity; // nilai awal sekadar tidak diketahui, diganti setelah request pertama
 
   let pageCount = 0; // penghitung halaman, dipakai sebagai jaring pengaman
 
   while (skip < total) {
     pageCount++;
 
-    // break: jaring pengaman -> hentikan total loop kalau sudah menarik
-    // lebih dari 20 halaman (setara 2000 produk). Ini mencegah infinite
-    // loop seandainya server mengirim nilai `total` yang tidak wajar.
+    // Pengaman: Hentikan loop jika >20 halaman untuk mencegah infinite loop.
     if (pageCount > 20) {
       break;
     }
@@ -235,7 +243,7 @@ async function fetchAllProductsFromApi() {
 
     combinedProducts = combinedProducts.concat(data.products);
 
-    total = data.total; // total keseluruhan produk di server (mis. 194)
+    total = data.total; // total keseluruhan produk di server
 
     skip += FETCH_PAGE_LIMIT;
   }
@@ -243,11 +251,8 @@ async function fetchAllProductsFromApi() {
   return combinedProducts;
 }
 
-/**
- * Function Declaration: fetchProducts
- * Mengambil seluruh produk dari Products API secara dinamis dengan
- * fetch(), dibungkus try...catch untuk Global Error Handling.
- */
+// mengambil seluruh produk dari Products API secara dinamis dengan fetch(), dibungkus try...catch untuk Global Error Handling.
+
 async function fetchProducts() {
   renderSkeletons(PAGE_SIZE);
 
@@ -268,20 +273,15 @@ async function fetchProducts() {
   }
 }
 
-// =========================
 // FILTER KATEGORI (populate dropdown)
-// =========================
 
-/**
- * Function Declaration: populateCategoryOptions
- * Mengumpulkan kategori unik menggunakan for...of + Set, lalu mengisi
- * elemen <select>.
- */
+// Kumpulkan kategori unik untuk mengisi elemen <select>
+
 function populateCategoryOptions(products) {
   const categorySet = new Set();
 
   for (const product of products) {
-    // continue: lewati produk yang tidak punya kategori.
+    // lewati produk yang tidak punya kategori
     if (!product.category) {
       continue;
     }
@@ -302,14 +302,10 @@ function populateCategoryOptions(products) {
   categoryFilter.innerHTML = optionsHtml;
 }
 
-// =========================
 // SEARCH (Debounce + Closure), FILTER & SORT (Functional Programming)
-// =========================
 
-/**
- * Function Declaration: applyFiltersAndRender
- * Pipeline: filter (search + kategori) -> sort -> reset pagination -> render.
- */
+// Pipeline: filter (search + kategori) -> sort -> reset pagination -> render.
+
 function applyFiltersAndRender() {
   const keyword = currentSearchTerm.trim().toLowerCase();
 
@@ -326,7 +322,7 @@ function applyFiltersAndRender() {
     return matchesKeyword && matchesCategory;
   });
 
-  // Sorting: if / else if / else menentukan comparator yang dipakai.
+  // Sorting menentukan comparator yang dipakai.
   if (currentSort === "price-asc") {
     workingProducts.sort((a, b) => a.price - b.price);
   } else if (currentSort === "price-desc") {
@@ -334,7 +330,7 @@ function applyFiltersAndRender() {
   } else if (currentSort === "rating-desc") {
     workingProducts.sort((a, b) => b.rating - a.rating);
   }
-  // else (currentSort === "default"): biarkan urutan asli dari API.
+  // biarkan urutan asli dari API.
 
   visibleCount = PAGE_SIZE; // setiap kali filter/sort berubah, pagination direset
 
@@ -364,9 +360,7 @@ sortFilter.addEventListener("change", function (event) {
   applyFiltersAndRender();
 });
 
-// =========================
 // RENDER PRODUK + LOAD MORE (Array Slicing)
-// =========================
 
 const buildProductCardHtml = (product) => {
   const stock = getStockLabel(product.stock);
@@ -393,16 +387,14 @@ const buildProductCardHtml = (product) => {
                     <span>${product.rating.toFixed(1)}</span>
                     <span class="stock-label ${stock.className}">${stock.text}</span>
                 </div>
+                <button class="btn-add-cart" data-id="${product.id}">+ Keranjang</button>
             </div>
         </article>
     `;
 };
 
-/**
- * Function Declaration: renderProductGrid
- * Load More / Pagination memakai teknik Array Slicing: hanya produk
- * dari index 0 sampai visibleCount yang dirender.
- */
+// Load More / Pagination memakai teknik Array Slicing: hanya produk dari index 0 sampai visibleCount yang dirender.
+
 function renderProductGrid() {
   if (workingProducts.length === 0) {
     productGrid.innerHTML = `
@@ -432,7 +424,7 @@ function renderProductGrid() {
 
   resultCount.textContent = `${workingProducts.length} produk ditemukan`;
 
-  // Ternary: tombol "Load More" hanya tampil jika masih ada sisa data.
+  // tombol Load More hanya tampil jika masih ada sisa data.
   loadMoreWrap.style.display =
     visibleCount < workingProducts.length ? "flex" : "none";
 }
@@ -443,11 +435,217 @@ loadMoreBtn.addEventListener("click", function () {
   renderProductGrid();
 });
 
-// =========================
+// KERANJANG: TOMBOL "+ KERANJANG" + ALERT + NAVBAR + LOCALSTORAGE
+
+/** Muat data keranjang per-user dari localStorage agar persisten setelah refresh. */
+
+function loadCartFromStorage() {
+  try {
+    let raw = localStorage.getItem(CART_KEY);
+
+    // Migrasi data dari key global lama ke key per-user jika ada.
+    if (!raw && CART_KEY !== LEGACY_CART_KEY) {
+      const legacyRaw = localStorage.getItem(LEGACY_CART_KEY);
+
+      if (legacyRaw) {
+        localStorage.setItem(CART_KEY, legacyRaw);
+        localStorage.removeItem(LEGACY_CART_KEY);
+        raw = legacyRaw;
+      }
+    }
+
+    // kalau belum ada data, pakai keranjang kosong.
+    if (!raw) {
+      cartItems = [];
+      recalcCartTotals();
+      return;
+    }
+
+    const parsed = JSON.parse(raw);
+
+    // Pastikan formatnya array, kalau rusak pakai keranjang kosong.
+    cartItems = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    cartItems = [];
+  }
+
+  recalcCartTotals();
+}
+
+// Menyimpan daftar produk + harga + qty ke localStorage sebagai teks JSON dengan key per-user "cartItems_<username>".
+
+function saveCartToStorage() {
+  localStorage.setItem(CART_KEY, JSON.stringify(cartItems));
+}
+
+// Menghitung ulang kuantitas & total harga dari cartItems memakai Array reduce.
+
+function recalcCartTotals() {
+  cartQty = cartItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+
+  cartTotalPrice = cartItems.reduce(
+    (sum, item) => sum + (Number(item.price) || 0) * (Number(item.qty) || 0),
+    0,
+  );
+}
+
+// Menambah produk ke cartItems: kalau id sudah ada, qty +1, kalau belum ada, push entri baru { id, title, price, qty }.
+
+function addProductToCart(product) {
+  const existing = cartItems.find((item) => item.id === product.id);
+
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cartItems.push({
+      id: product.id,
+      title: product.title,
+      price: Number(product.price) || 0,
+      qty: 1,
+    });
+  }
+
+  saveCartToStorage();
+
+  recalcCartTotals();
+
+  updateCartSummary();
+}
+
+// Memperbarui angka kuantitas & total harga di navbar setiap kali ada produk yang masuk keranjang
+
+function updateCartSummary() {
+  cartCountEl.textContent = cartQty;
+
+  cartTotalEl.textContent = Math.round(cartTotalPrice).toLocaleString("id-ID");
+}
+
+// Event Delegation: tangani klik tombol keranjang dan buka modal produk
+productGrid.addEventListener("click", function (event) {
+  const cartBtn = event.target.closest(".btn-add-cart");
+
+  if (cartBtn) {
+    const productId = Number(cartBtn.dataset.id);
+
+    const product = allProducts.find((item) => item.id === productId);
+
+    const productName = product ? product.title : "Produk";
+
+    alert(`Berhasil menambahkan ${productName} ke keranjang!`);
+
+    // alert() bersifat blocking, jadi kode di bawahnya baru berjalan setelah dialog ditutup
+    if (!product) {
+      return;
+    }
+
+    addProductToCart(product);
+    return;
+  }
+
+  // Klik pada area kartu produk (selain tombol keranjang) -> buka modal detail.
+  // abaikan klik yang bukan di dalam kartu produk.
+  const card = event.target.closest(".product-card");
+  if (!card) {
+    return;
+  }
+
+  const cardId = Number(card.dataset.id);
+
+  const cardProduct = allProducts.find((item) => item.id === cardId);
+
+  if (!cardProduct) {
+    return;
+  }
+
+  openProductModal(cardProduct);
+});
+
+// MODAL DETAIL PRODUK
+
+// Menampilkan pop-up berisi info lengkap: gambar, judul, merek, kategori, deskripsi, stok, rating, dan harga.
+
+function openProductModal(product) {
+  const stock = getStockLabel(product.stock);
+
+  const brand = product.brand ?? "-";
+
+  const description = product.description ?? "Tidak ada deskripsi.";
+
+  modalBody.innerHTML = `
+    <img src="${product.thumbnail}" alt="${escapeHtml(product.title)}" class="modal-img">
+    <div class="modal-category">${escapeHtml(String(product.category ?? "").replace(/-/g, " "))}</div>
+    <h2 class="modal-title">${escapeHtml(product.title)}</h2>
+    <div class="modal-brand">Merek: <strong>${escapeHtml(brand)}</strong></div>
+    <div class="modal-rating">
+      <span>${renderStars(product.rating)}</span>
+      <span>${Number(product.rating).toFixed(1)}</span>
+      <span class="stock-label ${stock.className}">${stock.text} (${Number(product.stock) || 0})</span>
+    </div>
+    <p class="modal-desc">${escapeHtml(description)}</p>
+    <div class="modal-price-row">
+      <span class="price-now">${formatRupiah(product.price)}</span>
+    </div>
+    <button class="btn-add-cart" data-id="${product.id}">+ Keranjang</button>
+  `;
+
+  productModal.style.display = "flex";
+}
+
+// Menyembunyikan pop-up detail produk
+function closeProductModal() {
+  productModal.style.display = "none";
+}
+
+closeModalBtn.addEventListener("click", closeProductModal);
+
+// Klik area gelap di luar konten -> tutup modal
+productModal.addEventListener("click", function (event) {
+  if (event.target === productModal) {
+    closeProductModal();
+  }
+});
+
+// Tombol Escape -> tutup modal
+document.addEventListener("keydown", function (event) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (productModal.style.display === "flex") {
+    closeProductModal();
+  }
+});
+
+// Tombol "+ Keranjang" di dalam modal ikut menambah keranjang
+modalBody.addEventListener("click", function (event) {
+  const cartBtn = event.target.closest(".btn-add-cart");
+
+  if (!cartBtn) {
+    return;
+  }
+
+  const productId = Number(cartBtn.dataset.id);
+
+  const product = allProducts.find((item) => item.id === productId);
+
+  if (!product) {
+    return;
+  }
+
+  alert(`Berhasil menambahkan ${product.title} ke keranjang!`);
+
+  addProductToCart(product);
+
+  closeProductModal();
+});
+
 // INISIALISASI APLIKASI
-// =========================
 
 function initApp() {
+  loadCartFromStorage();
+
+  updateCartSummary();
+
   fetchProducts();
 }
 

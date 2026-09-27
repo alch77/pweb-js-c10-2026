@@ -33,6 +33,11 @@
           <span class="greeting"
             >Halo, <strong id="userGreeting">Pengguna</strong></span
           >
+          <!-- al: Info Keranjang & Tombol Logout -->
+          <div class="cart-summary" style="font-size: 13px; font-weight: bold; color: var(--pink-3);">
+            🛒 (<span id="cartCount">0</span>) | Rp <span id="cartTotal">0</span>
+          </div>
+          <button id="logoutBtn" class="btn-outline" style="padding: 6px 14px; font-size: 12px;">Logout</button>
         </div>
       </div>
     </header>
@@ -63,5 +68,13 @@
         <button class="btn-outline" id="loadMoreBtn">Muat Lebih Banyak</button>
       </div>
     </main>
+
+    <!-- al: MODAL DETAIL PRODUK -->
+    <div id="productModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center;">
+      <div class="modal-content" style="background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; position: relative;">
+        <button id="closeModalBtn" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
   </body>
 </html>
