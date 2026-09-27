@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login - Mini Shopee</title>
+
+    <link rel="stylesheet" href="login.css">
+
+    <script src="login.js" defer></script>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="login-card">
+
+            <div class="logo">
+                🛍️
+            </div>
+
+            <h1>Mini Shopee</h1>
+
+            <p class="subtitle">
+                Login untuk mulai belanja
+            </p>
+
+            <form id="loginForm">
+
+                <!-- USERNAME -->
+                <div class="form-group">
+
+                    <label for="username">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder="Masukkan username"
+                        autocomplete="username"
+                    >
+
+                </div>
+
+
+                <!-- PASSWORD -->
+                <div class="form-group">
+
+                    <label for="password">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Masukkan password"
+                        autocomplete="current-password"
+                    >
+
+                </div>
+
+
+                <!-- LOGIN BUTTON -->
+                <button
+                    type="submit"
+                    id="loginButton"
+                >
+
+                    <span id="loginText">
+                        Login
+                    </span>
+
+                    <span
+                        id="spinner"
+                        class="spinner hidden"
+                    ></span>
+
+                </button>
+
+
+                <!-- ERROR MESSAGE -->
+                <div
+                    id="errorMessage"
+                    class="error-message"
+                ></div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
