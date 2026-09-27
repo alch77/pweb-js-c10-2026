@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Katalog Produk - Mini Shopee</title>
+
+    <link rel="stylesheet" href="catalog.css" />
+
+    <script src="catalog.js" defer></script>
+  </head>
+
+  <body>
+    <!-- NAVBAR -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand-mark">
+          <span class="logo-badge">🛍️</span>
+          Mini Shopee
+        </div>
+
+        <div class="search-wrap">
+          <span class="icon">🔎</span>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Cari produk atau kategori..."
+          />
+        </div>
+
+        <div class="user-zone">
+          <span class="greeting"
+            >Halo, <strong id="userGreeting">Pengguna</strong></span
+          >
+        </div>
+      </div>
+    </header>
+
+    <!-- TOOLBAR: FILTER & SORT -->
+    <div class="toolbar">
+      <div class="filters">
+        <select id="categoryFilter">
+          <option value="all">Semua Kategori</option>
+        </select>
+
+        <select id="sortFilter">
+          <option value="default">Default</option>
+          <option value="price-asc">Harga Termurah</option>
+          <option value="price-desc">Harga Termahal</option>
+          <option value="rating-desc">Rating Tertinggi</option>
+        </select>
+      </div>
+
+      <div class="result-count" id="resultCount"></div>
+    </div>
+
+    <!-- KATALOG PRODUK -->
+    <main class="container">
+      <div id="productGrid" class="product-grid"></div>
+
+      <div class="load-more-wrap" id="loadMoreWrap" style="display: none">
+        <button class="btn-outline" id="loadMoreBtn">Muat Lebih Banyak</button>
+      </div>
+    </main>
+  </body>
+</html>
