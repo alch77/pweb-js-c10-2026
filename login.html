@@ -1,99 +1,61 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Login - Mini Shopee</title>
 
-    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="login.css" />
 
     <script src="login.js" defer></script>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <div class="login-container">
+      <div class="login-card">
+        <div class="logo">🛍️</div>
 
-        <div class="login-card">
+        <h1>Mini Shopee</h1>
 
-            <div class="logo">
-                🛍️
-            </div>
+        <p class="subtitle">Login untuk mulai belanja</p>
 
-            <h1>Mini Shopee</h1>
+        <form id="loginForm">
+          <!-- USERNAME -->
+          <div class="form-group">
+            <label for="username"> Username </label>
 
-            <p class="subtitle">
-                Login untuk mulai belanja
-            </p>
+            <input
+              type="text"
+              id="username"
+              placeholder="Masukkan username"
+              autocomplete="username"
+            />
+          </div>
 
-            <form id="loginForm">
+          <!-- PASSWORD -->
+          <div class="form-group">
+            <label for="password"> Password </label>
 
-                <!-- USERNAME -->
-                <div class="form-group">
+            <input
+              type="password"
+              id="password"
+              placeholder="Masukkan password"
+              autocomplete="current-password"
+            />
+          </div>
 
-                    <label for="username">
-                        Username
-                    </label>
+          <!-- LOGIN BUTTON -->
+          <button type="submit" id="loginButton">
+            <span id="loginText"> Login </span>
 
-                    <input
-                        type="text"
-                        id="username"
-                        placeholder="Masukkan username"
-                        autocomplete="username"
-                    >
+            <span id="spinner" class="spinner hidden"></span>
+          </button>
 
-                </div>
-
-
-                <!-- PASSWORD -->
-                <div class="form-group">
-
-                    <label for="password">
-                        Password
-                    </label>
-
-                    <input
-                        type="password"
-                        id="password"
-                        placeholder="Masukkan password"
-                        autocomplete="current-password"
-                    >
-
-                </div>
-
-
-                <!-- LOGIN BUTTON -->
-                <button
-                    type="submit"
-                    id="loginButton"
-                >
-
-                    <span id="loginText">
-                        Login
-                    </span>
-
-                    <span
-                        id="spinner"
-                        class="spinner hidden"
-                    ></span>
-
-                </button>
-
-
-                <!-- ERROR MESSAGE -->
-                <div
-                    id="errorMessage"
-                    class="error-message"
-                ></div>
-
-            </form>
-
-        </div>
-
+          <!-- ERROR MESSAGE -->
+          <div id="errorMessage" class="error-message"></div>
+        </form>
+      </div>
     </div>
-
-</body>
-
+  </body>
 </html>
