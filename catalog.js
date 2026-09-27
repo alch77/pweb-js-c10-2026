@@ -108,7 +108,10 @@ logoutBtn.addEventListener("click", function () {
 // function Declaration: formatRupiah
 
 function formatRupiah(price = 0) {
-  return "Rp " + Math.round(price).toLocaleString("id-ID");
+  // Mengalikan harga USD dari API dengan kurs 15.000 agar tampil dalam nominal Rupiah realistis
+  const hargaRupiah = price * 15000;
+
+  return "Rp " + Math.round(hargaRupiah).toLocaleString("id-ID");
 }
 
 /**
@@ -517,7 +520,10 @@ function addProductToCart(product) {
 function updateCartSummary() {
   cartCountEl.textContent = cartQty;
 
-  cartTotalEl.textContent = Math.round(cartTotalPrice).toLocaleString("id-ID");
+  // Dikalikan 15.000 agar tampilan total belanja di navbar serasi dengan harga produk
+  cartTotalEl.textContent = Math.round(cartTotalPrice * 15000).toLocaleString(
+    "id-ID",
+  );
 }
 
 // Event Delegation: tangani klik tombol keranjang dan buka modal produk
