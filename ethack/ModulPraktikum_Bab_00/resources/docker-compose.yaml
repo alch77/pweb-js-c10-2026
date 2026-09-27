@@ -1,0 +1,21 @@
+name: ethack-vuln-lab
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+  
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    ports:
+      - "3030:80"
+    environment:
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=dvwa
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - ./dvwa-php.ini:/etc/php/7.0/apache2/conf.d/99-dvwa.ini
